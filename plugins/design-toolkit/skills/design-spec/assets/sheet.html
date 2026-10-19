@@ -5,8 +5,8 @@
   It has no doctype, html, head, or body: the Artifact tool wraps the page in its own.
   Fill it with scripts/fill.mjs, never by writing this file with an editor tool: on the desktop app, writing
   an .html file opens it in the preview pane.
-  Leave "findings", "colors", "zooms", "beforeAfter", "states", "interactions", "parity", "options", "removed",
-  and "notInScope" as empty arrays when they do not
+  Leave "findings", "colors", "zooms", "beforeAfter", "interactive", "states", "interactions", "parity",
+  "options", "removed", and "notInScope" as empty arrays when they do not
   apply: their sections then do not render. Contrast ratios are computed here from the hex values, so the
   data never carries a ratio typed by hand.
   "checks" holds one ui-inspect --json report per screen and state, each with a "screen" label and a "reason"
@@ -48,6 +48,25 @@
       "lookFor": "The 1 on the paperclip: darker grey in light, and no change in dark.",
       "before": { "light": "shots/badge-before-desktop-light.png", "dark": "shots/badge-before-desktop-dark.png" },
       "after": { "light": "shots/badge-after-desktop-light.png", "dark": "shots/badge-after-desktop-dark.png" }
+    }
+  ],
+  "interactive": [
+    {
+      "label": "Attach button",
+      "lookFor": "The paperclip darkens on hover and shrinks a touch on press. Tab to it on the live row to see the focus ring.",
+      "standIn": "The button is the app's own markup and CSS over a 2x shot of the composer, so the colours are the real ones.",
+      "width": 320,
+      "height": 56,
+      "background": { "light": "shots/composer-bare-desktop-light.png", "dark": "shots/composer-bare-desktop-dark.png" },
+      "overlay": {
+        "html": "<button class=\"attach\" type=\"button\" aria-label=\"Attach a file\">+</button>",
+        "css": ".attach { position: absolute; left: 12px; top: 12px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: #5b616e; font: 600 18px system-ui; } .dark .attach { color: #a2a8b4; } .attach:hover, .attach.is-hover { background: rgba(0, 0, 0, 0.06); color: #16181d; } .dark .attach:hover, .dark .attach.is-hover { background: rgba(255, 255, 255, 0.08); color: #eceef2; } .attach:active, .attach.is-press { transform: scale(0.94); } .attach:focus-visible, .attach.is-focus { outline: 2px solid #2f5bd3; outline-offset: 2px; }"
+      },
+      "states": [
+        { "name": "Hover", "target": ".attach", "mode": "hover" },
+        { "name": "Press", "target": ".attach", "mode": "press" },
+        { "name": "Keyboard focus", "target": ".attach", "mode": "focus" }
+      ]
     }
   ],
   "states": [
@@ -160,7 +179,8 @@
   .ref { font-weight: 600; color: var(--ink); }
   .chip { background: var(--accent-soft); color: var(--accent); padding: 2px 10px; border-radius: 999px; font-weight: 600; }
   h1 { font-size: clamp(24px, 4vw, 32px); line-height: 1.15; margin: 12px 0 8px; letter-spacing: -0.015em; text-wrap: balance; }
-  .summary { font-size: 17px; color: var(--muted); margin: 0; max-width: 70ch; }
+  .summary { font-size: 17px; color: var(--muted); margin: 0; }
+  .too-long { color: var(--fail); font-size: 13px; margin: 6px 0 0; }
   section { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; margin-top: 20px; }
   h2 { font-size: 18px; margin: 0 0 16px; }
   h3 { font-size: 15px; margin: 20px 0 10px; }
@@ -206,6 +226,15 @@
   .zoom + .zoom { margin-top: 28px; }
   .zoom-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
   .table-scroll { overflow-x: auto; }
+  .standin { font-size: 14px; color: var(--muted); margin: 0 0 14px; max-width: 70ch; }
+  .stages { display: flex; flex-wrap: wrap; gap: 14px 16px; align-items: start; }
+  .stage-tile { display: grid; gap: 6px; max-width: 100%; overflow-x: auto; }
+  .stage { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
+  .stage > img { display: block; width: 100%; height: 100%; }
+  .overlay { position: absolute; inset: 0; }
+  .stage-error { color: var(--fail); font-size: 13px; }
+  .interactive-item + .interactive-item { margin-top: 28px; }
+  .subhead { font-size: 13px; font-weight: 600; margin: 18px 0 8px; }
   .colors { min-width: 720px; }
   .colors td { vertical-align: middle; }
   .where { font-size: 13px; color: var(--muted); }
@@ -330,11 +359,20 @@
     return { ground: `rgb(${ground.r}, ${ground.g}, ${ground.b})`, ratio: Math.round(((hi + 0.05) / (lo + 0.05)) * 10) / 10 };
   }
 
+  // The summary is read at a glance: three lines at full width. Below desktop width it wraps more, which
+  // is fine, so it is measured only where the sheet is as wide as it gets.
+  function flagLongSummary(summary, minWidth) {
+    if (window.innerWidth < minWidth) return;
+    const lines = Math.round(summary.offsetHeight / parseFloat(getComputedStyle(summary).lineHeight));
+    if (lines > 3) summary.after(el('p', 'too-long', `This summary runs ${lines} lines; cut it to 3.`));
+  }
+
   function header() {
     const node = el('header');
     const meta = el('div', 'meta');
     meta.append(el('span', 'ref', data.ref), el('span', 'chip', data.status), el('span', '', `Round ${data.round}`));
     node.append(meta, el('h1', '', data.title), el('p', 'summary', data.summary));
+    requestAnimationFrame(() => flagLongSummary(node.querySelector('.summary'), 1200));
     return node;
   }
 
@@ -445,6 +483,68 @@
     return section('Before and After', ...blocks);
   }
 
+  // An interactive item is the real screen shot with the element rebuilt over it in HTML and CSS: live, so
+  // the reviewer can hover and press it, then frozen once per state, so the states read side by side and a
+  // headless capture can shoot them. Each item's CSS is nested under its own block so items cannot clash.
+  const STATE_CLASS = { hover: 'is-hover', press: 'is-press', focus: 'is-focus' };
+  const THEMES = ['light', 'dark'];
+
+  function stage(item, theme, live) {
+    const box = el('div', `stage ${theme}${live ? ' live' : ''}`);
+    box.style.width = `${item.width}px`;
+    box.style.height = `${item.height}px`;
+    const img = el('img');
+    img.alt = `${item.label}, ${theme}`;
+    img.src = item.background[theme];
+    const overlay = el('div', 'overlay');
+    overlay.innerHTML = item.overlay.html;
+    // A frozen copy is a picture of a state: inert keeps it out of the pointer and the tab order alike.
+    overlay.inert = !live;
+    box.append(img, overlay);
+    return box;
+  }
+
+  function freeze(box, state) {
+    const targets = box.querySelectorAll(state.target);
+    if (!STATE_CLASS[state.mode]) return `Mode "${state.mode}" is not hover, press, or focus`;
+    if (!targets.length) return `Target "${state.target}" matched nothing in the overlay`;
+    targets.forEach((node) => node.classList.add(STATE_CLASS[state.mode]));
+    return null;
+  }
+
+  function stageTile(text, box, problem) {
+    const tile = el('div', 'stage-tile');
+    tile.append(el('div', 'colhead', text), box);
+    if (problem) tile.append(el('div', 'stage-error', problem));
+    return tile;
+  }
+
+  function interactiveBlock(item, index) {
+    const wrap = el('div', 'interactive-item');
+    wrap.dataset.interactive = index;
+    const style = el('style');
+    style.textContent = `[data-interactive="${index}"] { ${item.overlay.css || ''} }`;
+    wrap.append(style, el('h3', '', item.label));
+    if (item.lookFor) wrap.append(lookFor(item.lookFor));
+    if (item.standIn) wrap.append(el('p', 'standin', item.standIn));
+    const live = el('div', 'stages');
+    THEMES.forEach((theme) => live.append(stageTile(theme === 'light' ? 'Light' : 'Dark', stage(item, theme, true))));
+    const frozen = el('div', 'stages');
+    for (const theme of THEMES) {
+      frozen.append(stageTile(`At rest, ${theme}`, stage(item, theme, false)));
+      for (const state of item.states || []) {
+        const box = stage(item, theme, false);
+        frozen.append(stageTile(`${state.name}, ${theme}`, box, freeze(box, state)));
+      }
+    }
+    wrap.append(el('div', 'subhead', 'Live: Hover, Press, or Tab to It'), live, el('div', 'subhead', 'Every State, Frozen'), frozen);
+    return wrap;
+  }
+
+  function interactiveSection() {
+    return section('Interactive States', ...data.interactive.map(interactiveBlock));
+  }
+
   function statesSection() {
     const blocks = data.states.flatMap((screen) => {
       const grid = el('div', 'states');
@@ -527,6 +627,7 @@
     if ((data.colors || []).length) sheet.append(colorsSection());
     if ((data.zooms || []).length) sheet.append(zoomsSection());
     if ((data.beforeAfter || []).length) sheet.append(beforeAfterSection());
+    if ((data.interactive || []).length) sheet.append(interactiveSection());
     if ((data.states || []).length) sheet.append(statesSection());
     if ((data.checks || []).length) sheet.append(checksSection());
     if ((data.removed || []).length) sheet.append(removedSection());

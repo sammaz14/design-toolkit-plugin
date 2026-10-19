@@ -69,6 +69,7 @@
   .status { background: var(--accent-soft); color: var(--accent); padding: 2px 10px; border-radius: 999px; font-weight: 600; }
   h1 { font-size: 24px; line-height: 1.2; margin: 10px 0 4px; letter-spacing: -0.01em; }
   .summary { margin: 0 0 22px; color: var(--muted); font-size: 16px; }
+  .too-long { color: var(--broken); font-size: 13px; margin: -16px 0 22px; }
   .screen + .screen { margin-top: 28px; }
   .screen h2 { font-size: 15px; margin: 0 0 6px; }
   .look { margin: 0 0 10px; font-size: 14px; }
@@ -202,7 +203,11 @@
     const card = document.getElementById('card');
     const meta = el('div', 'meta');
     meta.append(el('span', 'ref', data.ref), el('span', 'status', data.status));
-    card.append(meta, el('h1', '', data.title), el('p', 'summary', data.summary));
+    const summary = el('p', 'summary', data.summary);
+    card.append(meta, el('h1', '', data.title), summary);
+    // The card is a fixed width, so three lines here is three lines in the image.
+    const lines = Math.round(summary.offsetHeight / parseFloat(getComputedStyle(summary).lineHeight));
+    if (lines > 3) summary.after(el('p', 'too-long', `This summary runs ${lines} lines; cut it to 3.`));
     (data.screens || []).forEach((screen) => card.append(screenBlock(screen)));
     if ((data.states || []).length) card.append(statesGrid(data.states));
     if ((data.findings || []).length) card.append(findingsBlock(data.findings));

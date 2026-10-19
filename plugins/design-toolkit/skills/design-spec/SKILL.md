@@ -96,6 +96,8 @@ node <skill>/scripts/fill.mjs <skill>/assets/sheet.html <scratch>/sheet.json <sc
 
 The summary, titles, and look-for lines are read by a designer or a product person, not by the person who reviews the code. Write what the person using the app sees and does, in the app's own words: its button labels, headings, and menu names.
 
+Keep the summary to three lines or fewer at the sheet's full width, and on the card. It runs the full width of the page, so three lines hold about 60 words. When it runs longer, the rendered card or sheet says so in red under it.
+
 Leave out what needs the code to make sense:
 
 - File and line references.
@@ -137,6 +139,7 @@ The quick card is one image. Every state goes in it, each with a title and a loo
    - `colors`: one row per changed colour per theme: `token`, `where` (the places it is used), `theme`, `surface` (what it sits on), `target` (the ratio it must meet: 4.5 for text, 3 for large text and icons, or the target the repo sets), and `before` and `after`, each with a `text` colour, an opaque `ground` colour, and an optional see-through `tint` laid over the ground. The sheet computes every ratio from these values. Never type a ratio, and never read one off a screenshot. Leave it empty when no colour changed.
    - `zooms`: one entry per changed element: `label`, `lookFor`, and `before` and `after` crops in both themes. They show every captured pixel, so the change reads large.
    - `beforeAfter`: each changed screen, before from `main` and after from the branch, each with a `lookFor` line. With zooms present, these are the context.
+   - `interactive`: one entry per element whose states need a pointer or the keyboard: hover, press, focus, a drag target, a menu that opens. See Interactive States below. Leave it empty for a change a screenshot shows in full.
    - `states`: every state from the inventory, by screen, with its `source` label.
    - `checks`: one entry per `ui-inspect --json` report, each with a `screen` label added (the screen and state it checked), and a `reason` on each finding you keep on purpose. Set it to `null` or `[]` if ui-inspect did not run, so the sheet claims no check.
    - `removed`: each inventoried state removed as impossible, with `state`, `reason`, and the server `citation`. It renders on every round.
@@ -153,6 +156,30 @@ The quick card is one image. Every state goes in it, each with a title and a loo
 5. Right after each publish, close the app's artifact pane: call `mcp__ccd_view__close_pane` with pane `artifact`. On the Claude desktop app a publish opens that pane by itself, even when no editor tool touched the `.html`, and review pages belong in the reviewer's own browser. Where the session has no such tool or is not on screen, skip this step.
 6. After each publish, open the sheet in the reviewer's own browser without bringing the browser to the front. On macOS, run `<skill>/scripts/open-bg-tab.sh <artifact URL>`, which runs `open -g`. On any host, put the link in the reply.
 
+### Interactive States
+
+A shot cannot show what happens under the pointer. For such a change, rebuild the element in HTML and CSS over a real 2x shot of its screen. The sheet then shows it twice: live, so the reviewer can hover, press, and tab to it in both themes, and frozen once per state, side by side, so the states compare at a glance and `capture.mjs` can shoot them.
+
+Each `interactive` entry:
+
+```json
+{
+  "label": "Caption buttons",
+  "lookFor": "Close turns red with a white glyph on hover.",
+  "standIn": "What on the page is a stand-in, and what the real platform adds that a page cannot show.",
+  "width": 720, "height": 64,
+  "background": { "light": "shots/bar-bare-light.png", "dark": "shots/bar-bare-dark.png" },
+  "overlay": { "html": "<div class=\"caption\">...</div>", "css": ".cap:hover, .cap.is-hover { ... }" },
+  "states": [{ "name": "Hover Close", "target": ".close", "mode": "hover" }]
+}
+```
+
+- **Background.** Capture the screen without the element, or with it at rest, at `width` by `height` CSS pixels (2x on disk), in both themes.
+- **Overlay.** Place it absolutely within the stage. Use the product's own markup and CSS where they can run in a page, and a stand-in only where they cannot, such as controls the operating system draws. The stage carries `light` or `dark` as a class for theme rules. The CSS is scoped to its entry.
+- **States.** Write each state rule twice in one selector: the real pseudo-class and its class, as `:hover, .is-hover`, `:active, .is-press`, and `:focus-visible, .is-focus`. A frozen copy adds the class to every element its `target` matches, and it is inert: it takes neither the pointer nor keyboard focus, so only the live row reacts.
+- **Say what is not real.** Fill `standIn` every time. The reviewer must know which pixels are the product and which the page drew.
+- The overlay HTML and CSS go in the `.json` data like every other field, through `fill.mjs`. Never write the filled `.html` with the Write tool.
+
 ## Step 5: Check Before Sending
 
 Read `references/critique.md` and check the rendered card or sheet against it. Judge the images, not the code. Then do the completeness check:
@@ -162,7 +189,9 @@ Read `references/critique.md` and check the rendered card or sheet against it. J
 - A quick card is one image that holds every state. No state is sent as a separate file.
 - Every before and after pair and every zoom says what to look for, naming the element and the change, and says so when a part is meant to stay the same.
 - Every changed colour is a row in `colors`, with its target.
-- Run `ui-inspect` on the filled sheet itself with `--ignore .sample`. The colour samples show failing colours on purpose.
+- Run `ui-inspect` on the filled sheet itself with `--ignore .sample --ignore .stage`. The colour samples show failing colours on purpose, and an interactive stage is the product's own screen, checked on its own.
+- The summary fits three lines: no red "runs N lines" note under it on the card or the desktop-width sheet.
+- Every frozen interactive state renders with no red "matched nothing" line, and the stand-in note says what the page cannot show.
 - Nothing claims a check that did not run. If a state could only be captured in the browser pane, or a fixture stood in for the server, the material says so.
 
 Fix what fails, re-render, and check again. Then send it.

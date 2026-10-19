@@ -126,6 +126,7 @@ test('the sheet template renders captured shots with no broken image or page err
   data.beforeAfter = [{ label: 'Box', before: pair, after: pair }];
   data.states = [{ screen: 'Box', items: [{ label: 'Default', source: 'Real server', ...pair }] }];
   data.zooms = [{ label: 'Box', lookFor: 'The box.', before: pair, after: pair }];
+  data.interactive = data.interactive.map((item) => ({ ...item, background: pair }));
   fillTemplate(dir, 'sheet.html', 'sheet-data', data);
   const shots = capture(['--url', join(dir, 'sheet.html'), '--out', dir, '--name', 'sheet', '--viewport', 'desktop', '--viewport', '390x844']);
   for (const shot of shots) {
@@ -151,12 +152,84 @@ async function inSheet(data, probe) {
   }
 }
 
+// Two entries that share a class name with different CSS, so a rule that leaks from one to the other shows.
+function interactiveItem(label, colour, states) {
+  return {
+    label, width: 120, height: 40, background: { light: 'shots/none.png', dark: 'shots/none.png' },
+    overlay: { html: '<button class="cap" type="button">x</button>', css: `.cap { color: ${colour}; } .cap:hover, .cap.is-hover { background: rgb(1, 2, 3); }` },
+    states,
+  };
+}
+
+test('an interactive item draws a live stage per theme and one frozen stage per state, with its CSS kept to itself', { skip: NO_CHROME }, async () => {
+  const data = {
+    ...sheetData(), ...OPTIONAL, checks: null,
+    interactive: [
+      interactiveItem('Red', 'rgb(200, 0, 0)', [{ name: 'Hover', target: '.cap', mode: 'hover' }, { name: 'Lost', target: '.nope', mode: 'hover' }]),
+      interactiveItem('Blue', 'rgb(0, 0, 200)', []),
+    ],
+  };
+  const seen = await inSheet(data, () => {
+    const block = (i) => document.querySelector(`[data-interactive="${i}"]`);
+    const stages = (i) => [...block(i).querySelectorAll('.stage')];
+    const red = stages(0);
+    return {
+      live: red.filter((s) => s.classList.contains('live')).map((s) => [...s.classList].filter((c) => c === 'light' || c === 'dark')[0]),
+      frozen: red.filter((s) => !s.classList.contains('live')).map((s) => s.querySelector('.cap').classList.contains('is-hover')),
+      hoverFill: getComputedStyle(red.find((s) => !s.classList.contains('live') && s.querySelector('.is-hover')).querySelector('.cap')).backgroundColor,
+      focusable: red.map((s) => { const b = s.querySelector('.cap'); b.focus(); return document.activeElement === b; }),
+      hit: [red[0], red[2]].map((s) => {
+        const b = s.querySelector('.cap');
+        b.scrollIntoView();
+        const r = b.getBoundingClientRect();
+        return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === b;
+      }),
+      errors: [...block(0).querySelectorAll('.stage-error')].map((e) => e.textContent),
+      colours: [0, 1].map((i) => getComputedStyle(block(i).querySelector('.cap')).color),
+    };
+  });
+  assert.deepEqual(seen.live, ['light', 'dark']);
+  // Per theme: at rest, Hover, then the lost target, which stays at rest.
+  assert.deepEqual(seen.frozen, [false, true, false, false, true, false]);
+  assert.equal(seen.hoverFill, 'rgb(1, 2, 3)');
+  // Only the two live stages take focus; inert also takes the frozen copies out of the pointer.
+  assert.deepEqual(seen.focusable, [true, true, false, false, false, false, false, false]);
+  assert.deepEqual(seen.hit, [true, false]);
+  assert.deepEqual(seen.errors, ['Target ".nope" matched nothing in the overlay', 'Target ".nope" matched nothing in the overlay']);
+  assert.deepEqual(seen.colours, ['rgb(200, 0, 0)', 'rgb(0, 0, 200)']);
+});
+
+async function summaryNote(template, blockId, data, width) {
+  const dir = workdir();
+  fillTemplate(dir, template, blockId, data);
+  const browser = await Browser.launch();
+  try {
+    const page = await browser.newPage({ width, height: 900 });
+    await page.goto(pathToFileURL(join(dir, template)).href, { timeoutMs: 5000, settleMs: 100 });
+    return await page.eval(() => document.querySelector('.too-long')?.textContent ?? null);
+  } finally {
+    await browser.close();
+  }
+}
+
+const LONG_SUMMARY = 'People can now attach a file from the composer, see how many files are attached, and retry a failed upload. '.repeat(6);
+
+test('a summary over three lines is flagged on the card and the desktop-width sheet, and not at phone width', { skip: NO_CHROME }, async () => {
+  const card = { ref: 'r', status: 's', title: 't', viewport: 'v', source: 's', captured: 'c', screens: [] };
+  assert.equal(await summaryNote('card.html', 'card-data', { ...card, summary: 'One short line.' }, 1300), null);
+  assert.match(await summaryNote('card.html', 'card-data', { ...card, summary: LONG_SUMMARY }, 1300), /^This summary runs \d+ lines; cut it to 3\.$/);
+  const sheet = { ...sheetData(), ...OPTIONAL, checks: null };
+  assert.equal(await summaryNote('sheet.html', 'sheet-data', { ...sheet, summary: 'One short line.' }, 1280), null);
+  assert.match(await summaryNote('sheet.html', 'sheet-data', { ...sheet, summary: LONG_SUMMARY }, 1280), /runs \d+ lines/);
+  assert.equal(await summaryNote('sheet.html', 'sheet-data', { ...sheet, summary: LONG_SUMMARY }, 400), null);
+});
+
 const sheetHeadings = (data) => inSheet(data, () => [...document.querySelectorAll('h2')].map((h) => h.textContent));
-const OPTIONAL = { colors: [], zooms: [], parity: [], options: [], removed: [], notInScope: [] };
+const OPTIONAL = { colors: [], zooms: [], interactive: [], parity: [], options: [], removed: [], notInScope: [] };
 
 test('the sheet renders every section, each optional one only when it has entries, and checks only when ui-inspect ran', { skip: NO_CHROME }, async () => {
   const full = await sheetHeadings(sheetData());
-  assert.deepEqual(full, ['What Changed Since the Last Round', 'Colour Changes', 'Zoomed In', 'Before and After', 'Every State', 'Measured Checks', 'Removed as Impossible', 'Reference Product Parity', 'Options Considered', 'Interaction Notes', 'Not in This PR', 'Open Questions']);
+  assert.deepEqual(full, ['What Changed Since the Last Round', 'Colour Changes', 'Zoomed In', 'Before and After', 'Interactive States', 'Every State', 'Measured Checks', 'Removed as Impossible', 'Reference Product Parity', 'Options Considered', 'Interaction Notes', 'Not in This PR', 'Open Questions']);
   const lean = await sheetHeadings({ ...sheetData(), ...OPTIONAL, checks: null });
   assert.deepEqual(lean, ['What Changed Since the Last Round', 'Before and After', 'Every State', 'Interaction Notes', 'Open Questions']);
   const empty = await sheetHeadings({ ...sheetData(), ...OPTIONAL, checks: [] });
@@ -193,7 +266,7 @@ test('the colour table judges the after colour first, says when a row already pa
 test('zoom crops show every captured pixel, and context shots show half', { skip: NO_CHROME }, async () => {
   const dir = workdir();
   const pair = sampleShots(dir);
-  fillTemplate(dir, 'sheet.html', 'sheet-data', { ...sheetData(), zooms: [{ label: 'Box', lookFor: 'The box.', before: pair, after: pair }], beforeAfter: [{ label: 'Box', lookFor: 'The box.', before: pair, after: pair }], states: [] });
+  fillTemplate(dir, 'sheet.html', 'sheet-data', { ...sheetData(), zooms: [{ label: 'Box', lookFor: 'The box.', before: pair, after: pair }], beforeAfter: [{ label: 'Box', lookFor: 'The box.', before: pair, after: pair }], states: [], interactive: [] });
   const browser = await Browser.launch();
   try {
     const page = await browser.newPage({ width: 1280, height: 800 });
