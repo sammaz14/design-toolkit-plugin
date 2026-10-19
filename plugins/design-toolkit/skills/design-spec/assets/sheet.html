@@ -1,0 +1,542 @@
+<title>Design Spec</title>
+<!--
+  Fill the JSON block below, put the shots it names under shots/, and publish this file as a
+  claude.ai Artifact with each shot in `files`. Republish the same file path each round so the URL stays.
+  It has no doctype, html, head, or body: the Artifact tool wraps the page in its own.
+  Fill it with scripts/fill.mjs, never by writing this file with an editor tool: on the desktop app, writing
+  an .html file opens it in the preview pane.
+  Leave "findings", "colors", "zooms", "beforeAfter", "states", "interactions", "parity", "options", "removed",
+  and "notInScope" as empty arrays when they do not
+  apply: their sections then do not render. Contrast ratios are computed here from the hex values, so the
+  data never carries a ratio typed by hand.
+  "checks" holds one ui-inspect --json report per screen and state, each with a "screen" label and a "reason"
+  on each finding kept on purpose. Set it to null or [] when ui-inspect did not run, so the sheet claims no check.
+-->
+<script type="application/json" id="sheet-data">
+{
+  "ref": "example-org/example-app#42",
+  "status": "Draft, round 2",
+  "round": 2,
+  "title": "Composer: attach button",
+  "summary": "Adds an attach button to the composer. It opens the file picker, shows the file count, and reports upload errors inline.",
+  "viewport": "1280x800 and 400x800, at 2x",
+  "source": "before: main @ 1a2b3c4, after: feat/attach @ 5d6e7f8",
+  "beforeLabel": "Before (main @ 1a2b3c4)",
+  "afterLabel": "After (feat/attach @ 5d6e7f8)",
+  "captured": "2026-10-16 14:02",
+  "changes": [
+    "The error text now names the file that failed."
+  ],
+  "removed": [
+    { "state": "Upload paused", "reason": "The server never pauses an upload, so the client's paused branch is dead code.", "citation": "api/upload.py:120" }
+  ],
+  "beforeAfter": [
+    {
+      "label": "Composer, one file attached",
+      "lookFor": "The paperclip button left of Send, and the 1 badge on it after a file is added.",
+      "before": { "light": "shots/composer-before-desktop-light.png", "dark": "shots/composer-before-desktop-dark.png" },
+      "after": { "light": "shots/composer-after-desktop-light.png", "dark": "shots/composer-after-desktop-dark.png" }
+    }
+  ],
+  "colors": [
+    { "token": "--text-faint", "where": "File count badge, upload hint", "theme": "light", "surface": "composer", "target": 4.5, "before": { "text": "#8a8a94", "ground": "#fcfcfc" }, "after": { "text": "#6b6b76", "ground": "#fcfcfc" } },
+    { "token": "--warn-text", "where": "Upload error text", "theme": "light", "surface": "its own tint", "target": 4, "before": { "text": "#d97706", "ground": "#fafaf9", "tint": "rgba(217, 119, 6, 0.1)" }, "after": { "text": "#a84e06", "ground": "#fafaf9", "tint": "rgba(217, 119, 6, 0.1)" } }
+  ],
+  "zooms": [
+    {
+      "label": "File count badge",
+      "lookFor": "The 1 on the paperclip: darker grey in light, and no change in dark.",
+      "before": { "light": "shots/badge-before-desktop-light.png", "dark": "shots/badge-before-desktop-dark.png" },
+      "after": { "light": "shots/badge-after-desktop-light.png", "dark": "shots/badge-after-desktop-dark.png" }
+    }
+  ],
+  "states": [
+    {
+      "screen": "Composer",
+      "items": [
+        { "label": "No files", "source": "Real server", "light": "shots/empty-desktop-light.png", "dark": "shots/empty-desktop-dark.png" },
+        { "label": "Upload failed", "source": "Fixture: upload endpoint returns 413", "light": "shots/error-desktop-light.png", "dark": "shots/error-desktop-dark.png" },
+        { "label": "Twelve files, narrow window", "source": "Fixture: twelve synthetic files", "light": "shots/many-narrow-light.png", "dark": "shots/many-narrow-dark.png" }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "screen": "Composer, one file attached",
+      "ran": ["desktop/light", "desktop/dark", "narrow/light", "narrow/dark"],
+      "allow": [],
+      "ignore": [],
+      "findings": [
+        { "level": "WARN", "id": "small-text", "where": ["desktop/light", "desktop/dark"], "message": "1 text element(s) under 12px: \"3 files\" 11px", "fix": "Nothing meant to be read goes below 12px.", "reason": "The count badge matches the existing 11px badge style." }
+      ]
+    },
+    {
+      "screen": "Composer, upload failed",
+      "ran": ["desktop/light", "desktop/dark", "narrow/light", "narrow/dark"],
+      "allow": [],
+      "ignore": [],
+      "findings": []
+    }
+  ],
+  "parity": [
+    { "change": "Attach button placement", "verdict": "matches", "note": "Left of the send button, as in the reference product." },
+    { "change": "File count badge", "verdict": "differs", "note": "The reference shows chips; chips do not fit the 400px window." }
+  ],
+  "options": [
+    { "name": "Badge with count", "summary": "One badge on the button. Compact at every width.", "recommended": true },
+    { "name": "Row of file chips", "summary": "Shows names, but wraps to three lines at 400px.", "recommended": false }
+  ],
+  "interactions": [
+    { "target": "Attach button", "input": "Click, Enter, or Space", "result": "Opens the system file picker." },
+    { "target": "Attach button", "input": "Tab", "result": "Takes focus after the message field; the focus ring shows." },
+    { "target": "Error text", "input": "Click 'Retry'", "result": "Uploads the failed file again." }
+  ],
+  "notInScope": [
+    "Drag and drop onto the composer is a separate change."
+  ],
+  "questions": [
+    "Should the badge count failed files, or only the files that uploaded?"
+  ]
+}
+</script>
+<style>
+  :root {
+    --ink: #16181d;
+    --muted: #5b616e;
+    --line: #e3e5ea;
+    --ground: #f6f7f9;
+    --surface: #ffffff;
+    --accent: #2f5bd3;
+    --accent-soft: #eef2fc;
+    --good: #1e7a46;
+    --good-soft: #e8f5ee;
+    --warn: #9a5b00;
+    --warn-soft: #fdf3e2;
+    --fail: #b3261e;
+    --fail-soft: #fdecea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #eceef2;
+      --muted: #a2a8b4;
+      --line: #2e323a;
+      --ground: #121418;
+      --surface: #1a1d22;
+      --accent: #8aa8ff;
+      --accent-soft: #1f2840;
+      --good: #6fd09a;
+      --good-soft: #15291f;
+      --warn: #f0b660;
+      --warn-soft: #2e2414;
+      --fail: #ff8a80;
+      --fail-soft: #3a1a18;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #eceef2;
+    --muted: #a2a8b4;
+    --line: #2e323a;
+    --ground: #121418;
+    --surface: #1a1d22;
+    --accent: #8aa8ff;
+    --accent-soft: #1f2840;
+    --good: #6fd09a;
+    --good-soft: #15291f;
+    --warn: #f0b660;
+    --warn-soft: #2e2414;
+    --fail: #ff8a80;
+    --fail-soft: #3a1a18;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { margin-bottom: 32px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+  .ref { font-weight: 600; color: var(--ink); }
+  .chip { background: var(--accent-soft); color: var(--accent); padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+  h1 { font-size: clamp(24px, 4vw, 32px); line-height: 1.15; margin: 12px 0 8px; letter-spacing: -0.015em; text-wrap: balance; }
+  .summary { font-size: 17px; color: var(--muted); margin: 0; max-width: 70ch; }
+  section { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; margin-top: 20px; }
+  h2 { font-size: 18px; margin: 0 0 16px; }
+  h3 { font-size: 15px; margin: 20px 0 10px; }
+  h3:first-of-type { margin-top: 0; }
+  ul, ol { margin: 0; padding-left: 20px; }
+  li + li { margin-top: 6px; }
+  .pair { display: grid; grid-template-columns: 48px repeat(2, minmax(0, 1fr)); gap: 8px 16px; align-items: start; }
+  .states { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 16px; }
+  .state { border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .state-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 10px; }
+  .state-label { font-weight: 600; }
+  .source { font-size: 12px; color: var(--muted); text-align: right; }
+  .themes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .colhead { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  figure { margin: 0; }
+  figure button { display: block; padding: 0; border: 0; background: none; cursor: zoom-in; max-width: 100%; }
+  .viewer { max-width: none; max-height: none; width: 100%; height: 100%; margin: 0; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); border: 0; background: transparent; cursor: zoom-out; }
+  .viewer[open] { display: flex; align-items: center; justify-content: center; }
+  .viewer::backdrop { background: rgba(10, 10, 12, 0.85); }
+  .viewer img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+  figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .none { font-size: 13px; color: var(--muted); padding: 16px; border: 1px dashed var(--line); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .verdict { font-weight: 600; padding: 1px 8px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+  .verdict.matches { color: var(--good); background: var(--good-soft); }
+  .verdict.differs { color: var(--warn); background: var(--warn-soft); }
+  .option { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .option + .option { margin-top: 10px; }
+  .option.recommended { border-color: var(--accent); }
+  .option-name { font-weight: 600; }
+  .level { font-weight: 600; padding: 1px 8px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+  .level.FAIL { color: var(--fail); background: var(--fail-soft); }
+  .level.WARN { color: var(--warn); background: var(--warn-soft); }
+  .check { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-wrap: anywhere; }
+  .check + .check { margin-top: 10px; }
+  .check-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 6px; }
+  .check-note { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .footnote { font-size: 13px; color: var(--muted); margin-top: 24px; }
+  .look { margin: 0 0 12px; max-width: 65ch; }
+  .look b { color: var(--accent); }
+  .zoom + .zoom { margin-top: 28px; }
+  .zoom-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+  .table-scroll { overflow-x: auto; }
+  .colors { min-width: 720px; }
+  .colors td { vertical-align: middle; }
+  .where { font-size: 13px; color: var(--muted); }
+  .swatch { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  .sample { display: grid; place-items: center; width: 60px; height: 36px; border-radius: 6px; border: 1px solid var(--line); font-weight: 600; }
+  .hex { display: grid; gap: 2px; font-size: 13px; }
+  .pill { font-weight: 600; padding: 1px 8px; border-radius: 999px; font-size: 12px; white-space: nowrap; justify-self: start; }
+  .pill.pass { color: var(--good); background: var(--good-soft); }
+  .pill.fail { color: var(--fail); background: var(--fail-soft); }
+  .pill.same { color: var(--muted); background: var(--ground); }
+  @media (max-width: 640px) {
+    .pair { grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr); gap: 6px 8px; }
+    .themes { grid-template-columns: 1fr; }
+    .states { grid-template-columns: 1fr; }
+    .zoom-grid { grid-template-columns: 1fr; }
+    section { padding: 16px; }
+  }
+</style>
+<main id="sheet"></main>
+<dialog class="viewer" id="viewer" aria-label="Full-size shot"></dialog>
+<script>
+  const data = JSON.parse(document.getElementById('sheet-data').textContent);
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  // Shots are captured at 2x, so half the natural width shows them at true size and never upscales. A zoom
+  // shows every captured pixel instead, capped at its column, so the changed element reads large.
+  function shot(src, alt, zoomed) {
+    if (!src) return el('div', 'none', 'Not captured');
+    const figure = el('figure');
+    const link = el('button');
+    link.type = 'button';
+    link.onclick = () => openViewer(src, alt);
+    const img = el('img');
+    img.alt = alt;
+    img.loading = 'lazy';
+    img.onload = () => { img.style.width = img.naturalWidth / (zoomed ? 1 : 2) + 'px'; };
+    img.src = src;
+    link.append(img);
+    figure.append(link);
+    return figure;
+  }
+
+  // The artifact viewer blocks a link to a published file, so a shot opens full size in the page itself.
+  const viewer = document.getElementById('viewer');
+  viewer.onclick = () => viewer.close();
+  function openViewer(src, alt) {
+    const img = el('img');
+    img.alt = alt;
+    img.src = src;
+    viewer.replaceChildren(img);
+    viewer.showModal();
+  }
+
+  function themePair(pair, label) {
+    const grid = el('div', 'themes');
+    for (const theme of ['light', 'dark']) {
+      const col = el('div');
+      col.append(el('div', 'colhead', theme === 'light' ? 'Light' : 'Dark'), shot(pair && pair[theme], `${label}, ${theme}`));
+      grid.append(col);
+    }
+    return grid;
+  }
+
+  function section(title, ...children) {
+    const node = el('section');
+    node.append(el('h2', '', title), ...children);
+    return node;
+  }
+
+  function list(items, ordered) {
+    const node = el(ordered ? 'ol' : 'ul');
+    items.forEach((text) => node.append(el('li', '', text)));
+    return node;
+  }
+
+  function table(headers) {
+    const node = el('table');
+    const head = el('tr');
+    headers.forEach((h) => head.append(el('th', '', h)));
+    node.append(head);
+    return node;
+  }
+
+  function td(child) {
+    const cell = el('td');
+    cell.append(child);
+    return cell;
+  }
+
+  // Colours are parsed by the browser, so any CSS colour syntax works, and laid over their ground before
+  // the WCAG ratio is taken: the ratio is the one a person sees, never a number typed into the data.
+  const paint = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  function rgba(css) {
+    paint.clearRect(0, 0, 1, 1);
+    paint.fillStyle = 'rgba(0, 0, 0, 0)';
+    paint.fillStyle = css;
+    paint.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = paint.getImageData(0, 0, 1, 1).data;
+    return { r, g, b, a: a / 255 };
+  }
+  function over(top, under) {
+    const mix = (k) => Math.round(top[k] * top.a + under[k] * (1 - top.a));
+    return { r: mix('r'), g: mix('g'), b: mix('b'), a: 1 };
+  }
+  function luminance(c) {
+    const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+  }
+  function measure(side) {
+    if (![side.text, side.ground, side.tint].filter(Boolean).every((c) => CSS.supports('color', c))) return null;
+    let ground = rgba(side.ground);
+    if (ground.a < 1) return { error: `Ground ${side.ground} is see-through; give the opaque surface as ground and the layer as tint` };
+    if (side.tint) ground = over(rgba(side.tint), ground);
+    const ink = over(rgba(side.text), ground);
+    const [hi, lo] = [luminance(ink), luminance(ground)].sort((a, b) => b - a);
+    return { ground: `rgb(${ground.r}, ${ground.g}, ${ground.b})`, ratio: Math.round(((hi + 0.05) / (lo + 0.05)) * 10) / 10 };
+  }
+
+  function header() {
+    const node = el('header');
+    const meta = el('div', 'meta');
+    meta.append(el('span', 'ref', data.ref), el('span', 'chip', data.status), el('span', '', `Round ${data.round}`));
+    node.append(meta, el('h1', '', data.title), el('p', 'summary', data.summary));
+    return node;
+  }
+
+  function changesSection() {
+    const items = data.round > 1 ? data.changes : ['First round: nothing to compare yet.'];
+    return section('What Changed Since the Last Round', list(items));
+  }
+
+  function lookFor(text) {
+    const node = el('p', 'look');
+    node.append(el('b', '', 'Look for: '), document.createTextNode(text));
+    return node;
+  }
+
+  function swatch(side, target) {
+    const cell = el('div', 'swatch');
+    const m = measure(side);
+    if (!m || m.error) {
+      cell.append(el('span', 'pill fail', m ? m.error : `Not a colour: ${[side.text, side.ground, side.tint].filter(Boolean).join(', ')}`));
+      return { cell, ratio: null };
+    }
+    const sample = el('span', 'sample', 'Aa');
+    sample.style.color = side.text;
+    sample.style.background = m.ground;
+    const hex = el('span', 'hex');
+    hex.append(el('code', '', side.text), el('span', `pill ${m.ratio >= target ? 'pass' : 'fail'}`, `${m.ratio}:1`));
+    cell.append(sample, hex);
+    return { cell, ratio: m.ratio };
+  }
+
+  // The after colour decides first: a change that breaks a passing colour must never read as a pass.
+  function verdict(before, after, target) {
+    const passedBefore = before !== null && before >= target;
+    if (after === null) return el('span', 'pill fail', 'After colour could not be measured');
+    if (after < target) return el('span', 'pill fail', passedBefore ? 'Now below target' : 'Still below target');
+    return passedBefore ? el('span', 'pill same', 'Already passed; changed to match') : el('span', 'pill pass', 'Now passes');
+  }
+
+  function findingsSection() {
+    const items = data.findings.map((f) => {
+      const node = el('div', 'check');
+      const head = el('div', 'check-head');
+      head.append(el('span', `level ${f.level}`, f.level), el('code', '', f.area), el('span', 'source', f.where || ''));
+      node.append(head, el('div', '', f.text));
+      if (f.fix) node.append(el('div', 'check-note', `Fix: ${f.fix}`));
+      return node;
+    });
+    return section('Findings, in the Order to Fix Them', ...items);
+  }
+
+  function colorsSection() {
+    const node = el('table', 'colors');
+    const head = el('tr');
+    ['Token', 'Theme and surface', 'Target', 'Before', 'After', 'Result'].forEach((h) => head.append(el('th', '', h)));
+    node.append(head);
+    data.colors.forEach((c) => {
+      const target = c.target || 4.5;
+      const before = swatch(c.before, target);
+      const after = swatch(c.after, target);
+      const name = el('td');
+      name.append(el('code', '', c.token), el('div', 'where', c.where));
+      const row = el('tr');
+      row.append(name, el('td', '', `${c.theme}, on ${c.surface}`), el('td', '', `${target}:1`), td(before.cell), td(after.cell), td(verdict(before.ratio, after.ratio, target)));
+      node.append(row);
+    });
+    const scroll = el('div', 'table-scroll');
+    scroll.dataset.scrollX = '';
+    scroll.append(node);
+    return section('Colour Changes', el('p', 'look', 'Each sample shows the text colour on the surface it sits on. Ratios are computed from these values, with any see-through tint laid over its ground.'), scroll);
+  }
+
+  // Each crop carries its own caption, so the grid can stack to one column on a phone and stay readable.
+  function zoomsSection() {
+    const columns = [['before', data.beforeLabel || 'Before (main)'], ['after', data.afterLabel || 'After (this branch)']];
+    const blocks = data.zooms.map((z) => {
+      const wrap = el('div', 'zoom');
+      const grid = el('div', 'zoom-grid');
+      for (const theme of ['light', 'dark']) {
+        for (const [name, heading] of columns) {
+          const cellNode = el('div');
+          const shots = z[name];
+          cellNode.append(el('div', 'colhead', `${heading}, ${theme}`), shot(shots && shots[theme], `${z.label}, ${name}, ${theme}`, true));
+          grid.append(cellNode);
+        }
+      }
+      wrap.append(el('h3', '', z.label), lookFor(z.lookFor), grid);
+      return wrap;
+    });
+    return section('Zoomed In', ...blocks);
+  }
+
+  function beforeAfterSection() {
+    const blocks = data.beforeAfter.map((item) => {
+      const wrap = el('div');
+      const grid = el('div', 'pair');
+      grid.append(el('div'), el('div', 'colhead', data.beforeLabel || 'Before (main)'), el('div', 'colhead', data.afterLabel || 'After (this branch)'));
+      for (const theme of ['light', 'dark']) {
+        grid.append(el('div', 'colhead', theme === 'light' ? 'Light' : 'Dark'));
+        for (const [name, shots] of [['before', item.before], ['after', item.after]]) {
+          grid.append(shots ? shot(shots[theme], `${item.label}, ${name}, ${theme}`) : el('div', 'none', 'New screen: no before state'));
+        }
+      }
+      wrap.append(el('h3', '', item.label));
+      if (item.lookFor) wrap.append(lookFor(item.lookFor));
+      wrap.append(grid);
+      return wrap;
+    });
+    return section('Before and After', ...blocks);
+  }
+
+  function statesSection() {
+    const blocks = data.states.flatMap((screen) => {
+      const grid = el('div', 'states');
+      screen.items.forEach((item) => {
+        const card = el('div', 'state');
+        const head = el('div', 'state-head');
+        head.append(el('span', 'state-label', item.label), el('span', 'source', item.source));
+        card.append(head, themePair(item, `${screen.screen}, ${item.label}`));
+        grid.append(card);
+      });
+      return [el('h3', '', screen.screen), grid];
+    });
+    return section('Every State', ...blocks);
+  }
+
+  // One stacked block per finding: five table columns do not fit a phone-width sheet.
+  function checkReport(report) {
+    const skipped = [];
+    if ((report.allow || []).length) skipped.push(`rules skipped with --allow: ${report.allow.join(', ')}`);
+    if ((report.ignore || []).length) skipped.push(`elements left out with --ignore: ${report.ignore.join(', ')}`);
+    const allowed = skipped.length ? ` Not checked: ${skipped.join('; ')}. The reason is in Open Questions or the summary.` : '';
+    const items = report.findings.length ? report.findings.map((f) => {
+      const node = el('div', 'check');
+      const head = el('div', 'check-head');
+      head.append(el('span', `level ${f.level}`, f.level), el('code', '', f.id), el('span', 'source', f.where.join(', ')));
+      node.append(head, el('div', '', f.message), el('div', 'check-note', f.reason ? `Kept: ${f.reason}` : `Fix: ${f.fix}`));
+      return node;
+    }) : [el('p', '', 'No findings.')];
+    return [el('h3', '', report.screen), ...items, el('p', 'footnote', `ui-inspect ran at ${report.ran.join(', ')}.${allowed}`)];
+  }
+
+  function checksSection() {
+    return section('Measured Checks', ...data.checks.flatMap(checkReport));
+  }
+
+  function removedSection() {
+    const node = table(['State', 'Why it cannot happen', 'Server citation']);
+    data.removed.forEach((r) => {
+      const row = el('tr');
+      row.append(el('td', '', r.state), el('td', '', r.reason), td(el('code', '', r.citation)));
+      node.append(row);
+    });
+    return section('Removed as Impossible', node);
+  }
+
+  function paritySection() {
+    const node = table(['Change', 'Verdict', 'Note']);
+    data.parity.forEach((p) => {
+      const row = el('tr');
+      row.append(el('td', '', p.change), td(el('span', `verdict ${p.verdict}`, p.verdict === 'matches' ? 'Matches' : 'Differs')), el('td', '', p.note));
+      node.append(row);
+    });
+    return section('Reference Product Parity', node);
+  }
+
+  function optionsSection() {
+    const items = data.options.map((o) => {
+      const node = el('div', o.recommended ? 'option recommended' : 'option');
+      const name = el('div', 'option-name', o.recommended ? `${o.name} (recommended)` : o.name);
+      node.append(name, el('div', '', o.summary));
+      return node;
+    });
+    return section('Options Considered', ...items);
+  }
+
+  function interactionsSection() {
+    const node = table(['Target', 'Input', 'Result']);
+    data.interactions.forEach((i) => {
+      const row = el('tr');
+      row.append(el('td', '', i.target), el('td', '', i.input), el('td', '', i.result));
+      node.append(row);
+    });
+    return section('Interaction Notes', node);
+  }
+
+  function render() {
+    const sheet = document.getElementById('sheet');
+    sheet.append(header(), changesSection());
+    if ((data.findings || []).length) sheet.append(findingsSection());
+    if ((data.colors || []).length) sheet.append(colorsSection());
+    if ((data.zooms || []).length) sheet.append(zoomsSection());
+    if ((data.beforeAfter || []).length) sheet.append(beforeAfterSection());
+    if ((data.states || []).length) sheet.append(statesSection());
+    if ((data.checks || []).length) sheet.append(checksSection());
+    if ((data.removed || []).length) sheet.append(removedSection());
+    if (data.parity.length) sheet.append(paritySection());
+    if (data.options.length) sheet.append(optionsSection());
+    if ((data.interactions || []).length) sheet.append(interactionsSection());
+    if ((data.notInScope || []).length) sheet.append(section('Not in This PR', list(data.notInScope)));
+    sheet.append(section('Open Questions', list(data.questions, true)));
+    sheet.append(el('p', 'footnote', `Captured ${data.captured} at ${data.viewport}. ${data.source}.`));
+  }
+
+  render();
+</script>

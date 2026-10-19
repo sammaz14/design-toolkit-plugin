@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review Card</title>
+<!--
+  Fill the JSON block with scripts/fill.mjs (never by writing this file with an editor tool: on the desktop
+  app, writing an .html file opens it in the preview pane), keep it beside the shots it names, then render it:
+  node <skill>/scripts/capture.mjs --url card.html --selector .card --margin 0 --theme light --viewport 1300x900 --name card
+-->
+<script type="application/json" id="card-data">
+{
+  "ref": "example-org/example-app#42",
+  "status": "Draft, round 1",
+  "title": "Composer: attach button",
+  "summary": "People can now attach a file from the composer. The paperclip button opens the file picker, and a badge shows how many files are attached.",
+  "viewport": "1280x800",
+  "source": "before: main @ 1a2b3c4, after: feat/attach @ 5d6e7f8",
+  "beforeLabel": "Before (main)",
+  "afterLabel": "After (feat/attach)",
+  "captured": "2026-10-16 14:02",
+  "screens": [
+    {
+      "label": "Composer, one file attached",
+      "lookFor": "The paperclip button left of Send, and the 1 badge on it after a file is added.",
+      "before": { "light": "shots/composer-before-desktop-light.png", "dark": "shots/composer-before-desktop-dark.png" },
+      "after": { "light": "shots/composer-after-desktop-light.png", "dark": "shots/composer-after-desktop-dark.png" }
+    }
+  ],
+  "columns": 2,
+  "states": [
+    {
+      "label": "File too large",
+      "lookFor": "The red line under the file name says the file is over 25 MB, and Send stays on.",
+      "light": "shots/composer-too-large-desktop-light.png",
+      "dark": "shots/composer-too-large-desktop-dark.png"
+    }
+  ]
+}
+</script>
+<style>
+  :root {
+    --ink: #16181d;
+    --muted: #5b616e;
+    --line: #e3e5ea;
+    --ground: #f4f5f7;
+    --surface: #ffffff;
+    --accent: #2f5bd3;
+    --accent-soft: #eef2fc;
+    --broken: #c62828;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: var(--ground);
+    color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .card {
+    width: 1200px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px 32px 20px;
+  }
+  .meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+  .ref { font-weight: 600; color: var(--ink); }
+  .status { background: var(--accent-soft); color: var(--accent); padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+  h1 { font-size: 24px; line-height: 1.2; margin: 10px 0 4px; letter-spacing: -0.01em; }
+  .summary { margin: 0 0 22px; color: var(--muted); font-size: 16px; }
+  .screen + .screen { margin-top: 28px; }
+  .screen h2 { font-size: 15px; margin: 0 0 6px; }
+  .look { margin: 0 0 10px; font-size: 14px; }
+  .look b { color: var(--accent); }
+  .grid { display: grid; gap: 10px 16px; align-items: start; }
+  .head { font-size: 12px; font-weight: 600; color: var(--muted); }
+  figure { margin: 0; }
+  figure img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  figure img.broken { outline: 3px solid var(--broken); min-height: 60px; min-width: 120px; }
+  .findings { margin: 28px 0 0; padding: 0; list-style: none; }
+  .findings h2 { font-size: 15px; margin: 0 0 10px; }
+  .finding { display: grid; grid-template-columns: 54px 110px 1fr; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .finding .level { font-weight: 700; font-size: 12px; }
+  .finding .level.FAIL { color: var(--broken); }
+  .finding .area { color: var(--muted); font-size: 13px; }
+  .finding .note { grid-column: 3; color: var(--muted); font-size: 13px; }
+  .states { display: grid; gap: 24px 20px; align-items: start; margin-top: 28px; }
+  .screen + .states { margin-top: 36px; }
+  .tile h2 { font-size: 15px; margin: 0 0 6px; }
+  .tile figure + .theme { margin-top: 10px; }
+  .theme { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 4px; }
+  .none { font-size: 13px; color: var(--muted); padding: 16px; border: 1px dashed var(--line); border-radius: 8px; }
+  footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 22px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="card" id="card"></div>
+<script>
+  const data = JSON.parse(document.getElementById('card-data').textContent);
+  const THEMES = ['light', 'dark'];
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  // Shots are captured at 2x, so half the natural width shows them at true size and never upscales.
+  function shot(src, alt) {
+    const figure = el('figure');
+    const img = el('img');
+    img.alt = alt;
+    img.onload = () => { img.style.width = img.naturalWidth / 2 + 'px'; };
+    img.onerror = () => img.classList.add('broken');
+    img.src = src;
+    figure.append(img);
+    return figure;
+  }
+
+  function cell(pair, theme, label) {
+    if (!pair) return el('div', 'none', 'New screen: no before state');
+    return shot(pair[theme], `${label}, ${theme}`);
+  }
+
+  function screenBlock(screen) {
+    const block = el('section', 'screen');
+    block.append(el('h2', '', screen.label));
+    if (screen.lookFor) block.append(lookLine(screen.lookFor));
+    const before = data.beforeLabel || 'Before';
+    const after = data.afterLabel || 'After';
+    const columns = screen.before ? [[before, screen.before], [after, screen.after]] : [[after, screen.after]];
+    const grid = el('div', 'grid');
+    grid.style.gridTemplateColumns = `48px repeat(${columns.length}, minmax(0, 1fr))`;
+    grid.append(el('div'));
+    columns.forEach(([name]) => grid.append(el('div', 'head', name)));
+    // Only the themes a screen holds: an audit captured in one theme has no other row to draw.
+    for (const theme of THEMES.filter((t) => columns.some(([, pair]) => pair && pair[t]))) {
+      grid.append(el('div', 'head', theme === 'light' ? 'Light' : 'Dark'));
+      columns.forEach(([name, pair]) => grid.append(cell(pair, theme, `${screen.label}, ${name}`)));
+    }
+    block.append(grid);
+    return block;
+  }
+
+  function lookLine(text) {
+    const look = el('p', 'look');
+    look.append(el('b', '', 'Look for: '), document.createTextNode(text));
+    return look;
+  }
+
+  function stateTile(state) {
+    const tile = el('section', 'tile');
+    tile.append(el('h2', '', state.label));
+    if (state.lookFor) tile.append(lookLine(state.lookFor));
+    for (const theme of THEMES.filter((t) => state[t])) {
+      tile.append(el('p', 'theme', theme === 'light' ? 'Light' : 'Dark'));
+      tile.append(shot(state[theme], `${state.label}, ${theme}`));
+    }
+    return tile;
+  }
+
+  // Every state in one grid, so the reviewer reads the whole change from one image and never hunts
+  // through separate files. Each tile carries its own title and look-for line.
+  function statesGrid(states) {
+    const grid = el('div', 'states');
+    grid.style.gridTemplateColumns = `repeat(${data.columns || 2}, minmax(0, 1fr))`;
+    states.forEach((state) => grid.append(stateTile(state)));
+    return grid;
+  }
+
+  // An audit card lists what was found, in the order to fix it, each with where it shows.
+  function findingsBlock(findings) {
+    const block = el('section', 'findings');
+    block.append(el('h2', '', 'Findings, in the Order to Fix Them'));
+    findings.forEach((f) => {
+      const row = el('div', 'finding');
+      row.append(el('span', `level ${f.level}`, f.level), el('span', 'area', f.area), el('span', '', f.text));
+      if (f.fix) row.append(el('span', 'note', `Fix: ${f.fix}`));
+      if (f.where) row.append(el('span', 'note', `Where: ${f.where}`));
+      block.append(row);
+    });
+    return block;
+  }
+
+  function render() {
+    const card = document.getElementById('card');
+    const meta = el('div', 'meta');
+    meta.append(el('span', 'ref', data.ref), el('span', 'status', data.status));
+    card.append(meta, el('h1', '', data.title), el('p', 'summary', data.summary));
+    (data.screens || []).forEach((screen) => card.append(screenBlock(screen)));
+    if ((data.states || []).length) card.append(statesGrid(data.states));
+    if ((data.findings || []).length) card.append(findingsBlock(data.findings));
+    const footer = el('footer');
+    footer.append(el('span', '', `${data.viewport} at 2x. ${data.source}`), el('span', '', `Captured ${data.captured}`));
+    card.append(footer);
+  }
+
+  render();
+</script>
+</body>
+</html>

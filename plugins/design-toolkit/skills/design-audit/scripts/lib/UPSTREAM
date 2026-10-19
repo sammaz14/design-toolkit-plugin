@@ -1,0 +1,5 @@
+repo: https://github.com/Leonxlnx/taste-skill
+sha: f624f37a8c650b9cc550253104925efe4c8de246
+date: 2026-10-16
+files: skills/taste-skill/scripts/lint.mjs -> ../lint.mjs and lint-rules.mjs (adapted), skills/taste-skill/references/tells.md and skills/redesign-skill/SKILL.md -> ../../references/tells.md (adapted), LICENSE -> LICENSE
+changed: rules carry modes (site keeps the marketing house rules; app drops hairline, outlined-box, shadow, numbering, eyebrow, mono, gradient fill, claude-palette, default-font) and a fix-order area; app adds alert, z-index, dead-link, and oops-copy from redesign-skill; the em-dash count and the "not just X" copy pattern are dropped; paths read from the scanned folder; design-audit-ignore marks a kept line (taste-skill-ignore still works)

@@ -1,0 +1,6 @@
+repo: https://github.com/Leonxlnx/taste-skill
+sha: f624f37a8c650b9cc550253104925efe4c8de246
+date: 2026-10-16
+files: skills/taste-skill/scripts/lib/probe.mjs -> probe.mjs (adapted), skills/taste-skill/scripts/lib/rules.mjs -> rules.mjs (adapted), skills/taste-skill/scripts/inspect.mjs -> ../inspect.mjs (rewritten on the design-spec page setup), LICENSE -> LICENSE
+kept rules: overflow, clipped-text, covered-text, contrast, font-fallback, broken-image, small-text, size-count, measure, font-count, side-scroll
+changed: text checks reach body-size type; clipped-text tests side and bottom cuts per axis, excuses only the cut an ellipsis or line clamp marks, and stops at a scrolling pane; covered-text skips open menus, dialogs, and tooltips, a pinned bar where scrolling reveals the text, text a scrolling box has hidden, invisible layers, and see-through fades, and reads any colour syntax; font-fallback is measured in the page; contrast skips disabled controls; small-text is a WARN under 12px; side-scroll skips tables, grids, tab lists, and data-scroll-x

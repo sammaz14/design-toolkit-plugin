@@ -1,0 +1,4 @@
+repo: https://github.com/Leonxlnx/taste-skill
+sha: f624f37a8c650b9cc550253104925efe4c8de246
+date: 2026-10-16
+files: skills/taste-skill/scripts/lib/cdp.mjs -> cdp.mjs (byte-identical), LICENSE -> LICENSE
