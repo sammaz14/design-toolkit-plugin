@@ -82,9 +82,9 @@ The capture rules:
 
 ## Never Open a Draft in the Preview Pane
 
-The reviewer reads review pages in their own browser, as a background tab. On the Claude desktop app, writing an `.html` file with the Write tool opens it in the app's Browser preview pane. So:
+The reviewer reads review pages where they chose to (Step 4). On the Claude desktop app, writing an `.html` file with the Write tool opens it in the app's Browser preview pane. That pane is not the artifact pane, which a publish opens and Step 4 closes. The rule covers every page you send, a template or a page you built yourself. So:
 
-- Fill a template only with `scripts/fill.mjs`, run through the shell. Write the data as a `.json` file, which is safe, and never create or rewrite the `.html` with the Write tool.
+- Fill a template only with `scripts/fill.mjs`, run through the shell. Build a custom page through the shell too (a heredoc or a script), never with the Write tool. Write the data as a `.json` file, which is safe, and never create or rewrite the `.html` with the Write tool.
 - Change a filled page by editing its `.json` and running `fill.mjs` again.
 - Check renders headless with `capture.mjs`. Never look at the sheet in the preview pane.
 
@@ -153,8 +153,18 @@ The quick card is one image. Every state goes in it, each with a title and a loo
    Every list may be empty. Its section then does not render, so a sheet holds only what it has.
 3. Publish it with the Artifact tool (`icon`: `layout` on the first publish), with every shot under `files` (for example `{"shots/composer-after-desktop-light.png": "<scratch>/shots/composer-after-desktop-light.png"}`).
 4. Each later round, republish **the same file path** so the URL stays the same. Put the URL in the PR body the first time.
-5. Right after each publish, close the app's artifact pane: call `mcp__ccd_view__close_pane` with pane `artifact`. On the Claude desktop app a publish opens that pane by itself, even when no editor tool touched the `.html`, and review pages belong in the reviewer's own browser. Where the session has no such tool or is not on screen, skip this step.
-6. After each publish, open the sheet in the reviewer's own browser without bringing the browser to the front. On macOS, run `<skill>/scripts/open-bg-tab.sh <artifact URL>`, which runs `open -g`. On any host, put the link in the reply.
+5. Right after each publish, close the app's artifact pane: call `mcp__ccd_view__close_pane` with pane `artifact`. On the Claude desktop app a publish opens that pane by itself, even when no editor tool touched the `.html`. Skip this step when the open mode is `app-pane`, or where the session has no such tool or is not on screen.
+6. Open the sheet the way the reviewer set: run `<skill>/scripts/open-sheet.sh <artifact URL>`. It prints the link, and the link always goes in the reply, whatever the mode. The mode comes from `--mode`, else the `DESIGN_SPEC_OPEN` environment variable, else `auto`:
+
+   | Mode | Opens |
+   |---|---|
+   | `auto` (default) | `browser-background`. |
+   | `browser-background` | The default browser, left behind the app in use (`open -g`). |
+   | `browser-foreground` | The default browser, brought to the front. |
+   | `app-pane` | Nothing: the desktop app's artifact pane shows it, so step 5 leaves the pane open. |
+   | `none` | Nothing: the link in the reply is enough. |
+
+   Off macOS, every mode only prints the link. Set the default for a machine in the session environment, for example `"env": {"DESIGN_SPEC_OPEN": "browser-foreground"}` in Claude Code's `settings.json`.
 
 ### Interactive States
 
@@ -202,7 +212,7 @@ Fix what fails, re-render, and check again. Then send it.
 |---|---|
 | `scripts/capture.mjs` | Headless capture: fixed viewports, 2x, both themes, crop, broken-image and page-error report. |
 | `scripts/fill.mjs` | Fills a template's JSON block from a data file through the shell, so no editor tool writes the `.html`. |
-| `scripts/open-bg-tab.sh` | Opens a published sheet in the default browser on macOS without bringing it to the front (`open -g`). |
+| `scripts/open-sheet.sh` | Opens a published sheet by the reviewer's chosen mode, and prints its link. |
 | `scripts/lib/page.mjs` | Viewports, themes, and page setup, shared with `ui-inspect` so both see the same page. |
 | `scripts/lib/launch-browser.mjs` | Picks the browser and retries once with `--no-sandbox` where a Linux host blocks the sandbox. |
 | `scripts/lib/playwright-chromium.mjs` | Finds a Chromium that Playwright downloaded, for hosts with no installed Chrome. |
