@@ -33,4 +33,4 @@ The browser tests skip when no browser is installed.
 
 ## Licence
 
-The plugin is by Varde Labs. Parts are adapted from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) under the MIT License; each `scripts/lib/LICENSE` holds that notice, and each `scripts/lib/UPSTREAM` records the source commit.
+MIT, by Varde Labs: see `LICENSE`. Parts are adapted from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) under the MIT License; each `scripts/lib/LICENSE` holds that notice, and each `scripts/lib/UPSTREAM` records the source commit.

@@ -11,5 +11,6 @@
     "screenshots",
     "review",
     "design-spec"
-  ]
+  ],
+  "license": "MIT"
 }
