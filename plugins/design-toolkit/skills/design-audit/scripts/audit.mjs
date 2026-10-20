@@ -1,4 +1,3 @@
-
 #!/usr/bin/env node
 // Gathers the evidence for a design audit: full-page shots at each viewport and theme, ui-inspect's measured
 // findings, and the source linter's tells. It orders every finding by the fix order, names the shot for a
