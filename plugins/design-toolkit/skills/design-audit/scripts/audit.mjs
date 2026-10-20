@@ -1,3 +1,4 @@
+
 #!/usr/bin/env node
 // Gathers the evidence for a design audit: full-page shots at each viewport and theme, ui-inspect's measured
 // findings, and the source linter's tells. It orders every finding by the fix order, names the shot for a
@@ -61,13 +62,13 @@ function capture(opts) {
   const out = join(opts.out, 'shots');
   mkdirSync(out, { recursive: true });
   const args = [CAPTURE, ...pageArgs(opts), '--out', out, '--name', 'page', '--full-page'];
-  const shots = JSON.parse(execFileSync('node', args, { encoding: 'utf8', maxBuffer: 1 << 24 }));
+  const shots = JSON.parse(execFileSync(process.execPath, args, { encoding: 'utf8', maxBuffer: 1 << 24 }));
   return shots.map((s) => ({ where: `${s.viewport}/${s.theme}`, viewport: s.viewport, theme: s.theme, file: relative(opts.out, s.file).split('\\').join('/'), pageErrors: s.pageErrors }));
 }
 
 function inspect(opts) {
   const args = [INSPECT, ...pageArgs(opts), '--json', ...opts.ignore.flatMap((sel) => ['--ignore', sel])];
-  const run = spawnSync('node', args, { encoding: 'utf8', maxBuffer: 1 << 24 });
+  const run = spawnSync(process.execPath, args, { encoding: 'utf8', maxBuffer: 1 << 24 });
   // Exit 1 only means a FAIL was found; 2 means the run itself failed.
   if (run.status !== 0 && run.status !== 1) throw new Error(`ui-inspect failed: ${run.stderr.trim()}`);
   return JSON.parse(run.stdout);
