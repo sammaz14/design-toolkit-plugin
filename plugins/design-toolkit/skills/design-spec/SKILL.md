@@ -214,7 +214,7 @@ Fix what fails, re-render, and check again. Then send it.
 | `scripts/fill.mjs` | Fills a template's JSON block from a data file through the shell, so no editor tool writes the `.html`. |
 | `scripts/open-sheet.sh` | Opens a published sheet by the reviewer's chosen mode, and prints its link. |
 | `scripts/lib/page.mjs` | Viewports, themes, and page setup, shared with `ui-inspect` so both see the same page. |
-| `scripts/lib/launch-browser.mjs` | Picks the browser and retries once with `--no-sandbox` where a Linux host blocks the sandbox. |
+| `scripts/lib/launch-browser.mjs` | Picks the browser, retries once with `--no-sandbox` where a Linux host blocks the sandbox, and retries once with a fresh profile when Chrome hangs at start. |
 | `scripts/lib/playwright-chromium.mjs` | Finds a Chromium that Playwright downloaded, for hosts with no installed Chrome. |
 | `scripts/lib/cdp.mjs` | Zero-dependency Chrome DevTools Protocol client, vendored from taste-skill (MIT); see `scripts/lib/UPSTREAM`. |
 | `assets/card.html` | Quick card template, data-driven from its JSON block. |

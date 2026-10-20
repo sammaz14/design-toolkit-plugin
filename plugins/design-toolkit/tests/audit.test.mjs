@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { Browser, findChrome } from '../skills/design-spec/scripts/lib/cdp.mjs';
+import { findChrome } from '../skills/design-spec/scripts/lib/cdp.mjs';
+import { launchBrowser } from '../skills/design-spec/scripts/lib/launch-browser.mjs';
 import { order } from '../skills/design-audit/scripts/audit.mjs';
 import { AREAS } from '../skills/design-audit/scripts/lib/lint-rules.mjs';
 import { lint } from '../skills/design-audit/scripts/lint.mjs';
@@ -123,7 +124,7 @@ test('the audit names every planted tell, a shot or a file and line for each, in
 
   const card = JSON.parse(readFileSync(join(out, 'card.json'), 'utf8'));
   execFileSync('node', [join(SKILLS, 'design-spec', 'scripts', 'fill.mjs'), join(SKILLS, 'design-spec', 'assets', 'card.html'), join(out, 'card.json'), join(out, 'card.html')], { stdio: 'pipe' });
-  const browser = await Browser.launch();
+  const browser = await launchBrowser({ warn: () => {} });
   try {
     const page = await browser.newPage();
     await page.goto(pathToFileURL(join(out, 'card.html')).href, { timeoutMs: 5000, settleMs: 300 });

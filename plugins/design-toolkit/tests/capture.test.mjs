@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { Browser, findChrome } from '../skills/design-spec/scripts/lib/cdp.mjs';
+import { findChrome } from '../skills/design-spec/scripts/lib/cdp.mjs';
+import { launchBrowser } from '../skills/design-spec/scripts/lib/launch-browser.mjs';
 
 const SKILL = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'design-spec');
 const CAPTURE = join(SKILL, 'scripts', 'capture.mjs');
@@ -99,7 +100,7 @@ test('the card lays every state out in one grid image, each tile titled and capt
     ref: 'example-org/example-app#2', status: 'Draft', title: 'Synthetic states', summary: 'Three states.',
     viewport: '800x600', source: 'synthetic', captured: 'now', columns: 3, states,
   });
-  const browser = await Browser.launch();
+  const browser = await launchBrowser({ warn: () => {} });
   let tiles;
   try {
     const page = await browser.newPage();
@@ -142,7 +143,7 @@ function sheetData() {
 async function inSheet(data, probe) {
   const dir = workdir();
   fillTemplate(dir, 'sheet.html', 'sheet-data', data);
-  const browser = await Browser.launch();
+  const browser = await launchBrowser({ warn: () => {} });
   try {
     const page = await browser.newPage();
     await page.goto(pathToFileURL(join(dir, 'sheet.html')).href, { timeoutMs: 5000, settleMs: 0 });
@@ -202,7 +203,7 @@ test('an interactive item draws a live stage per theme and one frozen stage per 
 async function summaryNote(template, blockId, data, width) {
   const dir = workdir();
   fillTemplate(dir, template, blockId, data);
-  const browser = await Browser.launch();
+  const browser = await launchBrowser({ warn: () => {} });
   try {
     const page = await browser.newPage({ width, height: 900 });
     await page.goto(pathToFileURL(join(dir, template)).href, { timeoutMs: 5000, settleMs: 100 });
@@ -267,7 +268,7 @@ test('zoom crops show every captured pixel, and context shots show half', { skip
   const dir = workdir();
   const pair = sampleShots(dir);
   fillTemplate(dir, 'sheet.html', 'sheet-data', { ...sheetData(), zooms: [{ label: 'Box', lookFor: 'The box.', before: pair, after: pair }], beforeAfter: [{ label: 'Box', lookFor: 'The box.', before: pair, after: pair }], states: [], interactive: [] });
-  const browser = await Browser.launch();
+  const browser = await launchBrowser({ warn: () => {} });
   try {
     const page = await browser.newPage({ width: 1280, height: 800 });
     await page.goto(pathToFileURL(join(dir, 'sheet.html')).href, { timeoutMs: 5000, settleMs: 300 });
@@ -284,7 +285,7 @@ test('clicking a shot opens it full size in the page, and a click on it closes i
   const dir = workdir();
   const pair = sampleShots(dir);
   fillTemplate(dir, 'sheet.html', 'sheet-data', { ...sheetData(), zooms: [], beforeAfter: [{ label: 'Box', lookFor: 'The box.', before: pair, after: pair }], states: [] });
-  const browser = await Browser.launch();
+  const browser = await launchBrowser({ warn: () => {} });
   try {
     const page = await browser.newPage({ width: 1280, height: 800 });
     await page.goto(pathToFileURL(join(dir, 'sheet.html')).href, { timeoutMs: 5000, settleMs: 300 });
@@ -333,7 +334,7 @@ test('the sheet template carries no document skeleton, since the Artifact tool a
 test('the sheet labels before and after from its data', { skip: NO_CHROME }, async () => {
   const dir = workdir();
   fillTemplate(dir, 'sheet.html', 'sheet-data', { ...sheetData(), beforeLabel: 'Before (v1.2.0)', afterLabel: 'After (main @ 9f8e7d6)' });
-  const browser = await Browser.launch();
+  const browser = await launchBrowser({ warn: () => {} });
   try {
     const page = await browser.newPage();
     await page.goto(pathToFileURL(join(dir, 'sheet.html')).href, { timeoutMs: 5000, settleMs: 0 });

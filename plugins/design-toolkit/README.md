@@ -1,6 +1,6 @@
 # Design Toolkit
 
-**Version:** 0.9.0 | **Status:** Beta | **Author:** Varde Labs
+**Version:** 0.9.1 | **Status:** Beta | **Author:** Varde Labs
 
 Design review tooling for UI work: `design-spec` makes the review material, `ui-inspect` measures the screen first, `design-audit` lists what is generic or broken on an existing screen, and `clean-copy` cuts interface copy that should not exist.
 
@@ -19,7 +19,7 @@ See the repository README.
 
 ## Requirements
 
-`scripts/capture.mjs` and `ui-inspect`'s `scripts/inspect.mjs` need Node 22 or later and a Chromium-based browser. It uses `CHROME_PATH` when set, then an installed Chrome, Edge, or Chromium, then a Chromium that Playwright downloaded, from any of its cache folders (full build first, then the headless shell, newest first). It installs nothing. On a Linux host that blocks the Chromium sandbox, it retries once with `--no-sandbox`, as Playwright does there by default, and prints a note.
+`scripts/capture.mjs` and `ui-inspect`'s `scripts/inspect.mjs` need Node 22 or later and a Chromium-based browser. It uses `CHROME_PATH` when set, then an installed Chrome, Edge, or Chromium, then a Chromium that Playwright downloaded, from any of its cache folders (full build first, then the headless shell, newest first). It installs nothing. On a Linux host that blocks the Chromium sandbox, it retries once with `--no-sandbox`, as Playwright does there by default, and prints a note. If Chrome hangs at start, it kills that Chrome and retries once with a fresh profile.
 
 ## Upstream
 
